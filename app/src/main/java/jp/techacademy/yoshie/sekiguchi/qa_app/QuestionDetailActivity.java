@@ -1,10 +1,13 @@
 package jp.techacademy.yoshie.sekiguchi.qa_app;
 
 import android.content.Intent;
+import android.media.Image;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
+import android.widget.ImageButton;
 import android.widget.ListView;
 
 import com.google.firebase.auth.FirebaseAuth;
@@ -25,12 +28,20 @@ public class QuestionDetailActivity extends AppCompatActivity {
 
     private DatabaseReference mAnswerRef;
 
+    //fav登録有無。trueならlogin済
+    private boolean mFavStatus = false;
+
     private ChildEventListener mEventListener = new ChildEventListener() {
+
         @Override
         public void onChildAdded(DataSnapshot dataSnapshot, String s) {
             HashMap map = (HashMap) dataSnapshot.getValue();
 
             String answerUid = dataSnapshot.getKey();
+
+            Log.d("test", String.valueOf(map));
+            Log.d("test", String.valueOf(answerUid));
+
 
             for(Answer answer : mQuestion.getAnswers()) {
                 // 同じAnswerUidのものが存在しているときは何もしない
@@ -86,6 +97,36 @@ public class QuestionDetailActivity extends AppCompatActivity {
         mListView.setAdapter(mAdapter);
         mAdapter.notifyDataSetChanged();
 
+        //favoriteボタン
+        final ImageButton favoriteButton = (ImageButton) findViewById(R.id.favoriteButton);
+        favoriteButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                //Login済ユーザを取得
+                FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+
+                if (user != null) {
+                    //Login済ならお気に入り登録有無チェック
+                    mFavStatus = true;
+                    if (mFavStatus) {
+
+                        Log.d("test", String.valueOf(mFavStatus));
+
+                        //お気に入り登録済なら
+                        favoriteButton.setImageResource(R.drawable.fav_on);
+                    } else {
+                        favoriteButton.setImageResource(R.drawable.fav_off);
+                    }
+                } else {
+                    //未Loginなら
+                    mFavStatus = false;
+                    favoriteButton.setVisibility(View.GONE);
+                }
+            }
+        });
+
+        //投稿ボタン
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -99,11 +140,14 @@ public class QuestionDetailActivity extends AppCompatActivity {
                     startActivity(intent);
                 } else {
                     // Questionを渡して回答作成画面を起動する
-                    // TODO:
+                    Intent intent = new Intent(getApplicationContext(), AnswerSendActivity.class);
+                    intent.putExtra("question", mQuestion);
+                    startActivity(intent);
                 }
             }
         });
 
+        //
         DatabaseReference dataBaseReference = FirebaseDatabase.getInstance().getReference();
         mAnswerRef = dataBaseReference.child(Const.ContentsPATH).child(String.valueOf(mQuestion.getGenre())).child(mQuestion.getQuestionUid()).child(Const.AnswersPATH);
         mAnswerRef.addChildEventListener(mEventListener);
