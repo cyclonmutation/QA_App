@@ -11,9 +11,11 @@ import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Base64;
+import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.AdapterView;
 import android.widget.ListView;
 
 import com.google.firebase.auth.FirebaseAuth;
@@ -26,6 +28,7 @@ import com.google.firebase.database.FirebaseDatabase;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -33,12 +36,59 @@ public class MainActivity extends AppCompatActivity {
     private Toolbar mToolbar;
     private int mGenre = 0;
 
+    NavigationView mNavigationView;
+
     //質問リスト表示用
     private DatabaseReference mDatabaseReference;
     private DatabaseReference mGenreRef;
     private ListView mListView;
     private ArrayList<Question> mQuestionArrayList;
     private QuestionsListAdapter mAdapter;
+
+    //お気に入りの情報<genre, questionUid>を格納する
+    protected static Map<String, String> sFavoriteQidMap = new HashMap();
+
+    // ログイン済ユーザ取得
+    FirebaseUser mUser = FirebaseAuth.getInstance().getCurrentUser();
+
+    //favorite取得用のref
+    private DatabaseReference mFavoriteRef;
+
+    private ChildEventListener mFavoriteListener = new ChildEventListener() {
+        @Override
+        public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+            HashMap map = (HashMap) dataSnapshot.getValue();
+            String genre = (String) map.get("genre");
+
+            Log.d("mytest_Main_map", String.valueOf(map));
+            Log.d("mytest_Main_genre", String.valueOf(genre));
+            Log.d("mytest_Main_getKey", String.valueOf(dataSnapshot.getKey()));
+
+            //お気に入りの質問IDとジャンルをsFavoriteQidMapに格納
+            sFavoriteQidMap.put(dataSnapshot.getKey(), genre);
+
+            Log.d("mytest_sFavoriteQidMap_Main", String.valueOf(sFavoriteQidMap));
+        }
+
+        @Override
+        public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+        }
+
+        @Override
+        public void onChildRemoved(DataSnapshot dataSnapshot) {
+
+        }
+
+        @Override
+        public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+
+        }
+
+        @Override
+        public void onCancelled(DatabaseError databaseError) {
+
+        }
+    };
 
     private ChildEventListener mEventListener = new ChildEventListener() {
         @Override
@@ -71,6 +121,8 @@ public class MainActivity extends AppCompatActivity {
             Question question = new Question(title, body, name, uid, dataSnapshot.getKey(), mGenre, bytes, answerArrayList);
             mQuestionArrayList.add(question);
             mAdapter.notifyDataSetChanged();
+
+
         }
 
         @Override
@@ -115,11 +167,11 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         mToolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(mToolbar);
 
@@ -156,8 +208,8 @@ public class MainActivity extends AppCompatActivity {
         drawer.addDrawerListener(toggle);
         toggle.syncState();
 
-        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
-        navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener(){
+        mNavigationView = (NavigationView) findViewById(R.id.nav_view);
+        mNavigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
             @Override
             public boolean onNavigationItemSelected(MenuItem item) {
                 int id = item.getItemId();
@@ -172,25 +224,33 @@ public class MainActivity extends AppCompatActivity {
                     mToolbar.setTitle("健康");
                     mGenre = 3;
                 } else if (id == R.id.nav_computer) {
-                    mToolbar.setTitle("コンピュータ");
+                    mToolbar.setTitle("コンピューター");
                     mGenre = 4;
+                } else if (id == R.id.nav_favorite) {
+                    mGenre = 0;
                 }
 
-                DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-                drawer.closeDrawer(GravityCompat.START);
+                if (mGenre == 0) {
+                    //選択したジャンルがお気に入りの時、お気に入り画面へ遷移
+                    Intent intent = new Intent(getApplicationContext(), FavoriteActivity.class);
+                    startActivity(intent);
 
-                // 質問のリストをクリアしてから再度Adapterにセットし、AdapterをListViewにセットし直す
-                mQuestionArrayList.clear();
-                mAdapter.setQuestionArrayList(mQuestionArrayList);
-                mListView.setAdapter(mAdapter);
+                } else {    //選択したジャンルがお気に入り以外の場合
+                    DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+                    drawer.closeDrawer(GravityCompat.START);
 
-                // 選択したジャンルにリスナーを登録する
-                if (mGenreRef != null) {
-                    mGenreRef.removeEventListener(mEventListener);
+                    // 質問のリストをクリアしてから再度Adapterにセットし、AdapterをListViewにセットし直す
+                    mQuestionArrayList.clear();
+                    mAdapter.setQuestionArrayList(mQuestionArrayList);
+                    mListView.setAdapter(mAdapter);
+
+                    // 選択したジャンルにリスナーを登録する
+                    if (mGenreRef != null) {
+                        mGenreRef.removeEventListener(mEventListener);
+                    }
+                    mGenreRef = mDatabaseReference.child(Const.ContentsPATH).child(String.valueOf(mGenre));
+                    mGenreRef.addChildEventListener(mEventListener);
                 }
-                mGenreRef = mDatabaseReference.child(Const.ContentsPATH).child(String.valueOf(mGenre));
-                mGenreRef.addChildEventListener(mEventListener);
-
                 return true;
             }
         });
@@ -204,7 +264,19 @@ public class MainActivity extends AppCompatActivity {
         mQuestionArrayList = new ArrayList<Question>();
         mAdapter.notifyDataSetChanged();
 
+        Log.d("mytest_Main_mAdapter", String.valueOf(mAdapter));
+
+        mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                // Questionのインスタンスを渡して質問詳細画面を起動する
+                Intent intent = new Intent(getApplicationContext(), QuestionDetailActivity.class);
+                intent.putExtra("question", mQuestionArrayList.get(position));
+                startActivity(intent);
+            }
+        });
     }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -229,4 +301,39 @@ public class MainActivity extends AppCompatActivity {
 
         return super.onOptionsItemSelected(item);
     }
+
+
+    //onResumeでLogin状態をチェックし、お気に入りのリンク表示有無を判定する
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        mUser = FirebaseAuth.getInstance().getCurrentUser();
+
+        if (mUser == null) {
+            // 未loginならfavoriteButton非表示（お気に入り無し）
+            mNavigationView.getMenu().findItem(R.id.nav_favorite).setVisible(false);
+            sFavoriteQidMap.clear();
+
+        } else {
+            //login済ならfavoriteButtonを表示
+            mNavigationView.getMenu().findItem(R.id.nav_favorite).setVisible(true);
+
+            //FavoriteのRefを取得し、mFavoriteListenerでsFavoriteMapにお気に入りデータを格納する
+            DatabaseReference databaseRef = FirebaseDatabase.getInstance().getReference();
+            mFavoriteRef = databaseRef.child(Const.FavoritePATH).child(String.valueOf(mUser.getUid()));
+            mFavoriteRef.addChildEventListener(mFavoriteListener);
+
+
+            //Listなどの場合は、for文でlogを取得しないとパスしか入らない
+            for(Question q : mQuestionArrayList){
+                Log.d("mytest_getQid", String.valueOf(q.getQuestionUid()));
+            }
+
+
+            Log.d("mytest_mFavoriteRef", String.valueOf(mFavoriteRef));
+
+        }
+    }
+
 }
