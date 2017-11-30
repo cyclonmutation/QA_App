@@ -60,14 +60,14 @@ public class MainActivity extends AppCompatActivity {
             HashMap map = (HashMap) dataSnapshot.getValue();
             String genre = (String) map.get("genre");
 
-            Log.d("mytest_Main_map", String.valueOf(map));
-            Log.d("mytest_Main_genre", String.valueOf(genre));
-            Log.d("mytest_Main_getKey", String.valueOf(dataSnapshot.getKey()));
+//            Log.d("mytest_Main_map", String.valueOf(map));
+//            Log.d("mytest_Main_genre", String.valueOf(genre));
+//            Log.d("mytest_Main_getKey", String.valueOf(dataSnapshot.getKey()));
 
             //お気に入りの質問IDとジャンルをsFavoriteQidMapに格納
             sFavoriteQidMap.put(dataSnapshot.getKey(), genre);
 
-            Log.d("mytest_sFavoriteQidMap_Main", String.valueOf(sFavoriteQidMap));
+//            Log.d("mytest_sFavoriteQidMap_Main", String.valueOf(sFavoriteQidMap));
         }
 
         @Override
@@ -264,7 +264,7 @@ public class MainActivity extends AppCompatActivity {
         mQuestionArrayList = new ArrayList<Question>();
         mAdapter.notifyDataSetChanged();
 
-        Log.d("mytest_Main_mAdapter", String.valueOf(mAdapter));
+//        Log.d("mytest_Main_mAdapter", String.valueOf(mAdapter));
 
         mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -325,13 +325,13 @@ public class MainActivity extends AppCompatActivity {
             mFavoriteRef.addChildEventListener(mFavoriteListener);
 
 
-            //Listなどの場合は、for文でlogを取得しないとパスしか入らない
-            for(Question q : mQuestionArrayList){
-                Log.d("mytest_getQid", String.valueOf(q.getQuestionUid()));
-            }
+            //Listなどの場合は、for文でlogを取得しないとパスしか入らないので以下のようにする
+//            for(Question q : mQuestionArrayList){
+//                Log.d("mytest_getQid", String.valueOf(q.getQuestionUid()));
+//            }
 
 
-            Log.d("mytest_mFavoriteRef", String.valueOf(mFavoriteRef));
+//            Log.d("mytest_mFavoriteRef", String.valueOf(mFavoriteRef));
 
         }
     }

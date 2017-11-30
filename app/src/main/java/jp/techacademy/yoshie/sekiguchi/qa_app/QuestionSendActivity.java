@@ -14,13 +14,12 @@ import android.graphics.Matrix;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Base64;
-import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
@@ -81,14 +80,18 @@ public class QuestionSendActivity extends AppCompatActivity implements View.OnCl
     }
 
     //onActivityResult：Intent連携で取得した画像をリサイズしてImageViewに設定
-    protected void onActivityResult(int requestCode, int resultCode, Intent data){
-        if(requestCode == CHOOSER_REQUEST_CODE){
-            if(requestCode != RESULT_OK){
-                if(mPictureUri != null){
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == CHOOSER_REQUEST_CODE) {
+
+            //requestCode：int型で指定
+            //resultCode：int型
+
+            if (resultCode != RESULT_OK) {
+                if (mPictureUri != null) {
                     getContentResolver().delete(mPictureUri, null, null);
                     mPictureUri = null;
                 }
-                return;
+                return; //methodを抜ける
             }
 
             //画像を取得
@@ -231,6 +234,9 @@ public class QuestionSendActivity extends AppCompatActivity implements View.OnCl
 
         //galary選択Intentを与えてcreateChooser methodを呼ぶ
         Intent chooserIntent = Intent.createChooser(gallaryIntent, "画像を取得");
+
+        // EXTRA_INITIAL_INTENTS にカメラ撮影のIntentを追加
+        chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{cameraIntent});
 
         startActivityForResult(chooserIntent, CHOOSER_REQUEST_CODE);
     }
